@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: GHC ${{ matrix.ghc }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['9.4.8', '9.6.6', '9.8.2']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: haskell-actions/setup@v2
+        id: setup
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          cabal-version: 'latest'
+
+      - name: Cache cabal store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.setup.outputs.cabal-store }}
+          key: ${{ runner.os }}-ghc${{ matrix.ghc }}-${{ hashFiles('**/*.cabal') }}
+          restore-keys: ${{ runner.os }}-ghc${{ matrix.ghc }}-
+
+      - run: cabal update
+      - run: cabal build all --enable-tests
+
+  # Validates that the declared lower bounds actually compile on the
+  # oldest GHC we support. Informational: --prefer-oldest can drag in
+  # ancient transitive deps, so it does not gate. Flip continue-on-error
+  # off once the lower bounds are curated.
+  lower-bounds:
+    name: Lower bounds (GHC 9.4.8, --prefer-oldest)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.4.8'
+          cabal-version: 'latest'
+      - run: cabal update
+      - run: cabal build all --enable-tests --prefer-oldest
