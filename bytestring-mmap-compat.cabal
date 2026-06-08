@@ -51,7 +51,7 @@ library
                    , unix       >= 2.7  && < 2.9
   default-extensions: CPP, ForeignFunctionInterface, BangPatterns,
                       NondecreasingIndentation
-  ghc-options:       -Wall -O2
+  ghc-options:       -Wall
   c-sources:         cbits/hs_bytestring_mmap.c
   include-dirs:      include
   includes:          hs_bytestring_mmap.h
