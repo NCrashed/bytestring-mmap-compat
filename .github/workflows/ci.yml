@@ -35,14 +35,17 @@ jobs:
       - run: cabal update
       - run: cabal build all --enable-tests
 
-  # Validates that the declared lower bounds actually compile on the
-  # oldest GHC we support. Informational: --prefer-oldest can drag in
-  # ancient transitive deps, so it does not gate. Flip continue-on-error
-  # off once the lower bounds are curated.
-  lower-bounds:
-    name: Lower bounds (GHC 9.4.8, --prefer-oldest)
+  # Validates the declared lower bounds against the boot libraries GHC
+  # 9.4.8 actually ships (mtl 2.2, transformers 0.5, ...) by pinning them
+  # to the installed versions. This is the case a fixed package set (e.g.
+  # nix pkgsStatic) cannot upgrade away, so it must resolve; too-tight a
+  # lower bound on a boot lib fails here. Non-boot deps stay at their
+  # latest, avoiding ancient-transitive noise. Constraints for packages
+  # not in the plan are ignored by cabal, so the list is uniform across
+  # forks.
+  boot-floor:
+    name: Boot-lib floor (GHC 9.4.8, installed boot libs)
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: haskell-actions/setup@v2
@@ -50,4 +53,12 @@ jobs:
           ghc-version: '9.4.8'
           cabal-version: 'latest'
       - run: cabal update
-      - run: cabal build all --enable-tests --prefer-oldest
+      - run: |
+          cabal build all --enable-tests \
+            --constraint='mtl installed' \
+            --constraint='transformers installed' \
+            --constraint='containers installed' \
+            --constraint='text installed' \
+            --constraint='bytestring installed' \
+            --constraint='stm installed' \
+            --constraint='time installed'
